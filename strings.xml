@@ -1,8 +1,50 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Пьяный Гном</string>
-    <string name="drink_button_text">🎯 ВЫПИТЬ!</string>
-    <string name="profile_title">👤 Мой Профиль</string>
-    <string name="save_profile">💾 СОХРАНИТЬ ПРОФИЛЬ</string>
-    <string name="back_button">⬅️ НАЗАД</string>
+    <string name="app_name">Трекер Алкоголя</string>
+
+    <!-- Main Activity -->
+    <string name="total_drinks">Всего выпито:</string>
+    <string name="daily_total">Выпито сегодня:</string>
+    <string name="daily_alcohol">Чистого алкоголя:</string>
+    <string name="alcohol_level">Алкоголь в крови:</string>
+    <string name="time_to_sober">До трезвости:</string>
+    <string name="sober">Трезв</string>
+
+    <!-- Buttons -->
+    <string name="add_drink">➕ Добавить напиток</string>
+    <string name="calendar">📅 Календарь</string>
+    <string name="profile">👤 Профиль</string>
+    <string name="reset_today">🔄 Сбросить сегодня</string>
+
+    <!-- Status Messages -->
+    <string name="status_sober">🎯 Абсолютно трезв</string>
+    <string name="status_relaxed">😊 Легкое расслабление</string>
+    <string name="status_light">😎 Легкое опьянение</string>
+    <string name="status_medium">😮 Среднее опьянение</string>
+    <string name="status_heavy">🚨 Сильное опьянение</string>
+    <string name="status_danger">💀 Опасное опьянение</string>
+    <string name="status_critical">☠️ Критическое состояние</string>
+
+    <!-- Profile Activity -->
+    <string name="weight_hint">Вес (кг)</string>
+    <string name="male">Мужчина</string>
+    <string name="female">Женщина</string>
+    <string name="metabolism_label">Скорость метаболизма:</string>
+    <string name="save_profile">Сохранить профиль</string>
+    <string name="back">Назад</string>
+
+    <!-- Drink Dialog -->
+    <string name="select_drink">🎯 Что будем пить?</string>
+    <string name="amount_hint">Количество (мл)</string>
+    <string name="add">Добавить</string>
+
+    <!-- Messages -->
+    <string name="reset_confirmation">Сбросить данные за сегодняшний день?</string>
+    <string name="reset_success">Данные за сегодня сброшены! 🎯</string>
+    <string name="reset_no_data">Нет данных за сегодня для сброса</string>
+    <string name="profile_saved">Профиль сохранен! ✅</string>
+    <string name="enter_weight">Введите вес</string>
+    <string name="valid_weight">Введите вес от 30 до 200 кг</string>
+    <string name="enter_amount">Введите количество</string>
+    <string name="positive_number">Введите положительное число</string>
+    <string name="enter_number">Введите число</string>
 </resources>
