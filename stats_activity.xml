@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0F172A"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📈 Детальная статистика"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Карточки статистики -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#1E293B"
+            android:padding="16dp"
+            android:layout_marginBottom="20dp">
+
+            <TextView
+                android:id="@+id/totalStatsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Всего выпито: 0 мл"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/alcoholStatsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Чистого алкоголя: 0 г"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/drinksCountText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Количество напитков: 0"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF" />
+
+        </LinearLayout>
+
+        <!-- Распределение по напиткам -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🍷 Распределение по напиткам"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="10dp" />
+
+        <TextView
+            android:id="@+id/drinksDistributionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Нет данных"
+            android:textSize="14sp"
+            android:textColor="#E5E7EB"
+            android:background="#1E293B"
+            android:padding="16dp"
+            android:layout_marginBottom="20dp" />
+
+        <Button
+            android:id="@+id/backButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⬅️ Назад"
+            android:backgroundTint="#6B7280"
+            android:textColor="#FFFFFF"
+            android:layout_gravity="center" />
+
+    </LinearLayout>
+</ScrollView>

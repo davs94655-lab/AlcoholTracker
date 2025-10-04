@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0F172A"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="👤 Мой Профиль"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="30dp" />
+
+        <!-- Вес -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#1E293B"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⚖️ Ваш вес (кг)"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="8dp" />
+
+            <EditText
+                android:id="@+id/weightEditText"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:inputType="numberDecimal"
+                android:hint="Введите ваш вес"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:background="#374151"
+                android:padding="12dp" />
+
+        </LinearLayout>
+
+        <!-- Пол -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#1E293B"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🚻 Ваш пол"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="8dp" />
+
+            <RadioGroup
+                android:id="@+id/genderRadioGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/maleRadio"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Мужчина"
+                    android:textColor="#FFFFFF" />
+
+                <RadioButton
+                    android:id="@+id/femaleRadio"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Женщина"
+                    android:textColor="#FFFFFF" />
+
+            </RadioGroup>
+
+        </LinearLayout>
+
+        <!-- Скорость метаболизма -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#1E293B"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⚡ Скорость метаболизма"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="8dp" />
+
+            <SeekBar
+                android:id="@+id/metabolismSeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progress="50" />
+
+            <TextView
+                android:id="@+id/metabolismText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Средняя"
+                android:textSize="14sp"
+                android:textColor="#94A3B8"
+                android:gravity="center" />
+
+        </LinearLayout>
+
+        <!-- Текущие показатели -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#1E293B"
+            android:padding="16dp"
+            android:layout_marginBottom="20dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📊 Текущие показатели"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:id="@+id/currentBacText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔬 Алкоголь в крови: 0.0‰"
+                android:textSize="14sp"
+                android:textColor="#CBD5E1"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/soberTimeText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⏰ До полного вывода: 0 ч"
+                android:textSize="14sp"
+                android:textColor="#CBD5E1" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/saveProfileButton"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="💾 СОХРАНИТЬ ПРОФИЛЬ"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:backgroundTint="#10B981"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/backButton"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="⬅️ НАЗАД"
+            android:backgroundTint="#6B7280"
+            android:textColor="#FFFFFF" />
+
+    </LinearLayout>
+
+</ScrollView>

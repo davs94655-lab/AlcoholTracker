@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0F172A"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <!-- Заголовок -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🍻 Пьяный Гном 🧝‍♂️"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="20dp" />
+
+        <!-- 3D Гном с кружкой -->
+        <LinearLayout
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:background="@drawable/gnome_3d_background"
+            android:gravity="center"
+            android:layout_marginBottom="20dp"
+            android:elevation="12dp">
+
+            <!-- Эмодзи для имитации 3D гнома -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <!-- Шапка -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🎅"
+                    android:textSize="40sp"
+                    android:layout_marginBottom="-10dp" />
+
+                <!-- Гном с кружкой -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🧝‍♂️🍺"
+                    android:textSize="50sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Статус опьянения -->
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🎯 Абсолютно трезв"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#4ADE80"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Текущий уровень алкоголя -->
+        <TextView
+            android:id="@+id/alcoholLevelText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔬 Алкоголь в крови: 0.0‰"
+            android:textSize="14sp"
+            android:textColor="#CBD5E1"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Кнопка выпить -->
+        <Button
+            android:id="@+id/drinkButton"
+            android:layout_width="280dp"
+            android:layout_height="65dp"
+            android:text="🎯 ВЫПИТЬ!"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:backgroundTint="#F97316"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="30dp"
+            android:elevation="8dp"
+            android:drawablePadding="8dp" />
+
+        <!-- Ежедневная статистика -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#1E293B"
+            android:padding="16dp"
+            android:gravity="center"
+            android:elevation="4dp"
+            android:layout_marginBottom="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📅 СЕГОДНЯ"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:id="@+id/dailyTotalText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Выпито сегодня: 0 мл"
+                android:textSize="14sp"
+                android:textColor="#CBD5E1"
+                android:layout_marginBottom="5dp" />
+
+            <TextView
+                android:id="@+id/dailyAlcoholText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Чистого алкоголя: 0 г"
+                android:textSize="14sp"
+                android:textColor="#CBD5E1" />
+
+        </LinearLayout>
+
+        <!-- Общая статистика -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="20dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="#1E293B"
+                android:padding="12dp"
+                android:gravity="center"
+                android:layout_marginEnd="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📊 ВСЕГО"
+                    android:textSize="12sp"
+                    android:textColor="#94A3B8"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/totalDrinksText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 мл"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="#1E293B"
+                android:padding="12dp"
+                android:gravity="center"
+                android:layout_marginStart="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏰ СЕЙЧАС"
+                    android:textSize="12sp"
+                    android:textColor="#94A3B8"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/timeToSoberText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Трезв"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#4ADE80" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Кнопки управления -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="20dp">
+
+            <Button
+                android:id="@+id/calendarButton"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:text="📅 Календарь"
+                android:backgroundTint="#8B5CF6"
+                android:textColor="#FFFFFF"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/profileButton"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:text="👤 Профиль"
+                android:backgroundTint="#06B6D4"
+                android:textColor="#FFFFFF"
+                android:layout_marginStart="8dp" />
+
+        </LinearLayout>
+
+        <!-- История за неделю -->
+        <TextView
+            android:id="@+id/weekHistoryText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📈 За неделю: нет данных"
+            android:textSize="12sp"
+            android:textColor="#94A3B8"
+            android:gravity="center"
+            android:padding="12dp"
+            android:background="#1E293B" />
+
+        <!-- Напоминания -->
+        <Button
+            android:id="@+id/reminderButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⏰ Напоминания"
+            android:backgroundTint="#8B5CF6"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="10dp"
+            android:layout_gravity="center" />
+
+        <!-- Темы -->
+        <Button
+            android:id="@+id/themeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🎨 Сменить тему"
+            android:backgroundTint="#F59E0B"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="20dp"
+            android:layout_gravity="center" />
+
+        <!-- Статистика -->
+        <Button
+            android:id="@+id/statsButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📈 Подробная статистика"
+            android:backgroundTint="#6B7280"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="20dp"
+            android:layout_gravity="center" />
+
+        <!-- Сброс -->
+        <Button
+            android:id="@+id/resetButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔄 Сбросить всё"
+            android:backgroundTint="#EF4444"
+            android:textColor="#FFFFFF"
+            android:layout_gravity="center" />
+
+    </LinearLayout>
+
+</ScrollView>

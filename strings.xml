@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Пьяный Гном</string>
+    <string name="drink_button_text">🎯 ВЫПИТЬ!</string>
+    <string name="profile_title">👤 Мой Профиль</string>
+    <string name="save_profile">💾 СОХРАНИТЬ ПРОФИЛЬ</string>
+    <string name="back_button">⬅️ НАЗАД</string>
+</resources>
