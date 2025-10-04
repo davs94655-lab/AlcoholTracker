@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="@color/background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Заголовок -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="👤 Профиль пользователя"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:gravity="center"
+            android:layout_marginBottom="32dp" />
+
+        <!-- Вес -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Вес (кг):"
+            android:textSize="16sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/weightEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="70.0"
+            android:inputType="numberDecimal"
+            android:background="@android:drawable/edit_text"
+            android:padding="12dp"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Пол -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Пол:"
+            android:textSize="16sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="8dp" />
+
+        <RadioGroup
+            android:id="@+id/genderRadioGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="32dp">
+
+            <RadioButton
+                android:id="@+id/maleRadioButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Мужчина"
+                android:textSize="16sp"
+                android:checked="true" />
+
+            <RadioButton
+                android:id="@+id/femaleRadioButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Женщина"
+                android:textSize="16sp" />
+
+        </RadioGroup>
+
+        <!-- Метаболизм (автоматический расчет) -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Скорость метаболизма:"
+            android:textSize="16sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/metabolismValueText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Скорость метаболизма: 0.015 ‰/час\n(рассчитано автоматически)"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:gravity="center"
+            android:background="#F0F8FF"
+            android:padding="12dp"
+            android:layout_marginBottom="32dp" />
+
+        <!-- Кнопки -->
+        <Button
+            android:id="@+id/saveButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="💾 Сохранить профиль"
+            android:textSize="18sp"
+            android:background="@color/primary"
+            android:textColor="@color/white"
+            android:padding="16dp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/backButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⬅️ Назад"
+            android:textSize="16sp"
+            android:background="@color/secondary"
+            android:textColor="@color/white"
+            android:padding="12dp" />
+
+    </LinearLayout>
+
+</ScrollView>
