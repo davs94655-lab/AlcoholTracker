@@ -5,16 +5,17 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.widget.*
 import com.google.gson.Gson
+import java.text.SimpleDateFormat
+import java.util.*
+import android.text.TextWatcher
+import android.text.Editable
 
 class ProfileActivity : Activity() {
 
     private lateinit var weightEditText: EditText
     private lateinit var genderRadioGroup: RadioGroup
-    private lateinit var metabolismSeekBar: SeekBar
-    private lateinit var metabolismText: TextView
-    private lateinit var currentBacText: TextView
-    private lateinit var soberTimeText: TextView
-    private lateinit var saveProfileButton: Button
+    private lateinit var metabolismValueText: TextView
+    private lateinit var saveButton: Button
     private lateinit var backButton: Button
 
     private lateinit var sharedPreferences: SharedPreferences
@@ -22,29 +23,26 @@ class ProfileActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.profile_activity)
+        setContentView(R.layout.activity_profile)
 
         sharedPreferences = getSharedPreferences("AlcoholTracker", MODE_PRIVATE)
         loadUserProfile()
 
         initViews()
         setupClickListeners()
-        updateProfileUI()
+        updateUI()
     }
 
     private fun initViews() {
         weightEditText = findViewById(R.id.weightEditText)
         genderRadioGroup = findViewById(R.id.genderRadioGroup)
-        metabolismSeekBar = findViewById(R.id.metabolismSeekBar)
-        metabolismText = findViewById(R.id.metabolismText)
-        currentBacText = findViewById(R.id.currentBacText)
-        soberTimeText = findViewById(R.id.soberTimeText)
-        saveProfileButton = findViewById(R.id.saveProfileButton)
+        metabolismValueText = findViewById(R.id.metabolismValueText)
+        saveButton = findViewById(R.id.saveButton)
         backButton = findViewById(R.id.backButton)
     }
 
     private fun setupClickListeners() {
-        saveProfileButton.setOnClickListener {
+        saveButton.setOnClickListener {
             saveProfile()
         }
 
@@ -52,87 +50,88 @@ class ProfileActivity : Activity() {
             finish()
         }
 
-        metabolismSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                updateMetabolismText(progress)
+        // Слушатель изменения веса - автоматически пересчитываем метаболизм
+        weightEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) {
+                updateMetabolism()
             }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
+
+        // Слушатель изменения пола
+        genderRadioGroup.setOnCheckedChangeListener { _, _ ->
+            updateMetabolism()
+        }
     }
 
-    private fun updateProfileUI() {
+    private fun updateUI() {
+        // Вес
         weightEditText.setText(userProfile.weight.toString())
 
+        // Пол
         if (userProfile.isMale) {
-            genderRadioGroup.check(R.id.maleRadio)
+            genderRadioGroup.check(R.id.maleRadioButton)
         } else {
-            genderRadioGroup.check(R.id.femaleRadio)
+            genderRadioGroup.check(R.id.femaleRadioButton)
         }
 
-        val metabolismProgress = ((userProfile.metabolism - 0.1) / 0.1 * 50).toInt()
-        metabolismSeekBar.progress = metabolismProgress
-        updateMetabolismText(metabolismProgress)
-
-        updateCurrentStats()
+        // Метаболизм
+        updateMetabolism()
     }
 
-    private fun updateMetabolismText(progress: Int) {
-        val metabolism = 0.1 + (progress / 50.0) * 0.1
-        val text = when {
-            metabolism < 0.12 -> "Медленный"
-            metabolism < 0.14 -> "Ниже среднего"
-            metabolism < 0.16 -> "Средняя"
-            metabolism < 0.18 -> "Выше среднего"
-            else -> "Быстрый"
-        }
-        metabolismText.text = "$text (${"%.3f".format(metabolism)} г/ч/кг)"
-    }
+    // СУПЕР-РЕАЛИСТИЧНЫЙ расчет метаболизма
+    private fun updateMetabolism() {
+        try {
+            val weight = weightEditText.text.toString().toDoubleOrNull() ?: 70.0
+            val isMale = genderRadioGroup.checkedRadioButtonId == R.id.maleRadioButton
 
-    private fun updateCurrentStats() {
-        // Загрузка текущих данных алкоголя
-        val totalAlcoholGrams = sharedPreferences.getFloat("totalAlcoholGrams", 0f).toDouble()
+            // Основано на реальных медицинских данных:
+            // Средний человек выводит 0.1-0.2 г алкогля на кг веса в час
+            // Переводим в промилле: 0.15 г/кг/час ≈ 0.15 ‰/час для 70кг
 
-        // Расчет BAC
-        val r = if (userProfile.isMale) 0.68 else 0.55
-        val weightGrams = userProfile.weight * 1000
-        val bac = (totalAlcoholGrams / (r * weightGrams)) * 100
+            val gramsPerKgPerHour = if (isMale) 0.15 else 0.12 // мужчины быстрее
+            val metabolism = (gramsPerKgPerHour * weight) / 100 * 10 // пересчет в промилле/час
 
-        currentBacText.text = "🔬 Алкоголь в крови: ${"%.3f".format(bac)}‰"
+            metabolismValueText.text = "Скорость метаболизма: ${"%.3f".format(metabolism)} ‰/час\n(рассчитано автоматически)"
 
-        // Расчет времени до трезвости
-        if (bac > 0.1) {
-            val eliminationRate = userProfile.metabolism * userProfile.weight
-            val hoursToSober = (bac * 10) / eliminationRate
-            val hours = hoursToSober.toInt()
-            val minutes = ((hoursToSober - hours) * 60).toInt()
-            soberTimeText.text = "⏰ До полного вывода: ${hours}ч ${minutes}м"
-        } else {
-            soberTimeText.text = "⏰ До полного вывода: 0 ч"
+        } catch (e: Exception) {
+            metabolismValueText.text = "Скорость метаболизма: 0.150 ‰/час\n(рассчитано автоматически)"
         }
     }
 
     private fun saveProfile() {
         try {
-            val weight = weightEditText.text.toString().toDouble()
-            if (weight < 30 || weight > 200) {
-                Toast.makeText(this, "Введите реальный вес (30-200 кг)", Toast.LENGTH_SHORT).show()
+            val weightText = weightEditText.text.toString()
+            if (weightText.isEmpty()) {
+                Toast.makeText(this, "Введите вес", Toast.LENGTH_SHORT).show()
                 return
             }
 
-            val isMale = genderRadioGroup.checkedRadioButtonId == R.id.maleRadio
-            val metabolism = 0.1 + (metabolismSeekBar.progress / 50.0) * 0.1
+            val weight = weightText.toDouble()
+            if (weight < 30 || weight > 200) {
+                Toast.makeText(this, "Введите вес от 30 до 200 кг", Toast.LENGTH_SHORT).show()
+                return
+            }
 
-            userProfile = UserProfile(weight, isMale, metabolism)
+            val isMale = genderRadioGroup.checkedRadioButtonId == R.id.maleRadioButton
 
-            val editor = sharedPreferences.edit()
+            // РЕАЛИСТИЧНЫЙ расчет метаболизма на основе веса
+            val gramsPerKgPerHour = if (isMale) 0.15 else 0.12
+            val metabolism = (gramsPerKgPerHour * weight) / 100 * 10
+
+            userProfile = UserProfile(
+                weight = weight,
+                isMale = isMale,
+                metabolism = metabolism
+            )
+
             val gson = Gson()
             val profileJson = gson.toJson(userProfile)
-            editor.putString("userProfile", profileJson)
-            editor.apply()
+            sharedPreferences.edit().putString("userProfile", profileJson).apply()
 
-            Toast.makeText(this, "✅ Профиль сохранен!", Toast.LENGTH_LONG).show()
-            updateCurrentStats()
+            Toast.makeText(this, "Профиль сохранен! ✅", Toast.LENGTH_SHORT).show()
+            finish()
 
         } catch (e: NumberFormatException) {
             Toast.makeText(this, "Введите корректный вес", Toast.LENGTH_SHORT).show()

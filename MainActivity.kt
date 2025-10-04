@@ -11,12 +11,15 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.max
+import android.view.Gravity
 
 class MainActivity : Activity() {
 
     private lateinit var drinkButton: Button
     private lateinit var calendarButton: Button
     private lateinit var profileButton: Button
+    private lateinit var resetButton: Button
     private lateinit var totalDrinksText: TextView
     private lateinit var dailyTotalText: TextView
     private lateinit var dailyAlcoholText: TextView
@@ -31,6 +34,8 @@ class MainActivity : Activity() {
     private val dailyRecords = mutableMapOf<String, DailyRecord>()
     private lateinit var userProfile: UserProfile
     private lateinit var sharedPreferences: SharedPreferences
+
+    private var firstDrinkTime: Long = 0 // Время первого употребления
 
     // Крепость напитков в %
     private val drinkStrength = mapOf(
@@ -50,6 +55,9 @@ class MainActivity : Activity() {
         loadData()
         loadUserProfile()
 
+        // ДОБАВЬТЕ ЭТУ ПРОВЕРКУ
+        println("DEBUG ПРИ ЗАПУСКЕ: Вес=${userProfile.weight}кг, Метаболизм=${userProfile.metabolism}‰/час")
+
         initViews()
         setupClickListeners()
         updateUI()
@@ -60,6 +68,7 @@ class MainActivity : Activity() {
         drinkButton = findViewById(R.id.drinkButton)
         calendarButton = findViewById(R.id.calendarButton)
         profileButton = findViewById(R.id.profileButton)
+        resetButton = findViewById(R.id.resetButton)
         totalDrinksText = findViewById(R.id.totalDrinksText)
         dailyTotalText = findViewById(R.id.dailyTotalText)
         dailyAlcoholText = findViewById(R.id.dailyAlcoholText)
@@ -75,7 +84,7 @@ class MainActivity : Activity() {
         }
 
         calendarButton.setOnClickListener {
-            showCalendar()
+            showEnhancedCalendar() // вместо showCalendar()
         }
 
         profileButton.setOnClickListener {
@@ -83,10 +92,20 @@ class MainActivity : Activity() {
             startActivity(intent)
         }
 
-        // Добавьте эту строку:
-        findViewById<Button>(R.id.resetButton).setOnClickListener {
-            resetAll()
+        resetButton.setOnClickListener {
+            showResetConfirmationDialog()
         }
+    }
+
+    private fun showResetConfirmationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Сброс данных")
+            .setMessage("Сбросить данные за сегодняшний день?")
+            .setPositiveButton("Да") { _, _ ->
+                resetCurrentDay()
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     private fun showDrinkDialog() {
@@ -114,6 +133,11 @@ class MainActivity : Activity() {
 
             try {
                 val amount = amountStr.toInt()
+                if (amount <= 0) {
+                    Toast.makeText(this, "Введите положительное число", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
                 val selectedDrink = drinkSpinner.selectedItem.toString()
                 addDrink(selectedDrink, amount)
                 dialog.dismiss()
@@ -126,6 +150,13 @@ class MainActivity : Activity() {
     }
 
     private fun addDrink(drink: String, amount: Int) {
+        val currentTime = System.currentTimeMillis()
+
+        // Запоминаем время первого употребления
+        if (historyList.isEmpty()) {
+            firstDrinkTime = currentTime
+        }
+
         totalAmount += amount
 
         // Расчет алкоголя в граммах
@@ -134,7 +165,7 @@ class MainActivity : Activity() {
         totalAlcoholGrams += alcoholGrams
 
         // Добавляем в историю
-        val record = DrinkRecord(drink, amount, System.currentTimeMillis(), alcoholGrams)
+        val record = DrinkRecord(drink, amount, currentTime, alcoholGrams)
         historyList.add(0, record)
 
         // Обновляем дневную статистику
@@ -144,7 +175,13 @@ class MainActivity : Activity() {
         saveData()
 
         // Показываем тост с расчетом уровня алкоголя
-        val bac = calculateBAC(totalAlcoholGrams)
+        val hoursSinceFirstDrink = if (firstDrinkTime > 0) {
+            (currentTime - firstDrinkTime) / (1000.0 * 60 * 60)
+        } else {
+            0.0
+        }
+
+        val bac = calculateBAC(totalAlcoholGrams, hoursSinceFirstDrink)
         val messages = arrayOf(
             "За здоровье! 🍻 (${"%.2f".format(bac)}‰)",
             "Будь счастлив! 😊 (${"%.2f".format(bac)}‰)",
@@ -182,8 +219,14 @@ class MainActivity : Activity() {
         dailyTotalText.text = "Выпито сегодня: ${dailyAmount} мл"
         dailyAlcoholText.text = "Чистого алкоголя: ${"%.1f".format(dailyAlcohol)} г"
 
-        // Расчет уровня алкоголя в крови
-        val bac = calculateBAC(totalAlcoholGrams)
+        // Расчет уровня алкоголя в крови с учетом времени
+        val hoursSinceFirstDrink = if (firstDrinkTime > 0) {
+            (System.currentTimeMillis() - firstDrinkTime) / (1000.0 * 60 * 60)
+        } else {
+            0.0
+        }
+
+        val bac = calculateBAC(totalAlcoholGrams, hoursSinceFirstDrink)
         alcoholLevelText.text = "🔬 Алкоголь в крови: ${"%.3f".format(bac)}‰"
 
         // Статус опьянения
@@ -192,23 +235,28 @@ class MainActivity : Activity() {
         statusText.setTextColor(status.second)
 
         // Время до трезвости
-        updateTimeToSober()
+        updateTimeToSober(bac)
 
         // История за неделю
         updateWeekHistory()
     }
 
-    // 🧮 Расчет уровня алкоголя в крови (промилле)
-    private fun calculateBAC(totalAlcoholGrams: Double): Double {
-        // Формула Видмарка: BAC = (A / (r * W)) * 100
-        // A - масса чистого алкоголя в граммах
-        // r - фактор распределения (0.68 для мужчин, 0.55 для женщин)
-        // W - масса тела в граммах
+    // 🧮 ПРАВИЛЬНЫЙ расчет уровня алкоголя в крови
+    private fun calculateBAC(totalAlcoholGrams: Double, hoursSinceFirstDrink: Double): Double {
+        // ПРАВИЛЬНАЯ формула Widmark:
+        // BAC = (алкоголь в граммах / (вес * коэффициент распределения)) - (метаболизм * часы)
+        // Коэффициент распределения: 0.7 для мужчин, 0.6 для женщин
 
-        val r = if (userProfile.isMale) 0.68 else 0.55
-        val weightGrams = userProfile.weight * 1000
+        val r = if (userProfile.isMale) 0.7 else 0.6
+        val weight = userProfile.weight
 
-        return (totalAlcoholGrams / (r * weightGrams)) * 100
+        // BAC в промилле (‰) = (граммы алкоголя / (вес * r))
+        val bac = totalAlcoholGrams / (weight * r)
+
+        // Учитываем метаболизм (вывод алкоголя)
+        val metabolismEffect = userProfile.metabolism * hoursSinceFirstDrink
+
+        return max(0.0, bac - metabolismEffect)
     }
 
     // 🎯 Расчет статуса опьянения на основе промилле
@@ -216,29 +264,45 @@ class MainActivity : Activity() {
         return when {
             bac < 0.3 -> Pair("🎯 Абсолютно трезв", Color.parseColor("#4ADE80"))
             bac < 0.5 -> Pair("😊 Легкое расслабление", Color.parseColor("#22C55E"))
-            bac < 1.0 -> Pair("😎 Легкое опьянение", Color.parseColor("#EAB308"))
+            bac < 1.0 -> Pair("😊 Легкое опьянение", Color.parseColor("#EAB308"))
             bac < 1.5 -> Pair("😮 Среднее опьянение", Color.parseColor("#F97316"))
-            bac < 2.5 -> Pair("🚨 Сильное опьянение", Color.parseColor("#EF4444"))
+            bac < 2.0 -> Pair("🚨 Сильное опьянение", Color.parseColor("#EF4444"))
             bac < 3.0 -> Pair("💀 Опасное опьянение", Color.parseColor("#DC2626"))
             else -> Pair("☠️ Критическое состояние", Color.parseColor("#991B1B"))
         }
     }
 
-    // ⏰ Расчет времени до трезвости
-    private fun updateTimeToSober() {
-        val bac = calculateBAC(totalAlcoholGrams)
-        if (bac > 0.1) {
-            // Скорость вывода алкоголя зависит от метаболизма и веса
-            val eliminationRate = userProfile.metabolism * userProfile.weight
-            val hoursToSober = (bac * 10) / eliminationRate
+    // ⏰ ПРАВИЛЬНЫЙ расчет времени до трезвости
+    // ⏰ ПРАВИЛЬНЫЙ расчет времени до трезвости
+    // ⏰ ПРАВИЛЬНЫЙ расчет времени до трезвости
+    private fun updateTimeToSober(currentBAC: Double) {
+        if (currentBAC > 0.1) {
+            // Время до трезвости = текущий BAC / скорость метаболизма
+            val hoursToSober = currentBAC / userProfile.metabolism
 
             val hours = hoursToSober.toInt()
             val minutes = ((hoursToSober - hours) * 60).toInt()
 
-            timeToSoberText.text = "${hours}ч ${minutes}м"
-            timeToSoberText.setTextColor(Color.parseColor("#F97316"))
+            // ОТЛАДКА ДЛЯ ПРОВЕРКИ
+            println("DEBUG: BAC=$currentBAC, Метаболизм=${userProfile.metabolism}, Время=$hoursToSober часов")
+            println("DEBUG: Вес=${userProfile.weight}кг, Пол=${if (userProfile.isMale) "муж" else "жен"}")
+
+            // Предупреждение об опасности
+            if (currentBAC > 3.0) {
+                timeToSoberText.text = "ОПАСНОСТЬ! ${hours}ч ${minutes}м\nСрочно к врачу! 🚑"
+                timeToSoberText.setTextColor(Color.parseColor("#DC2626"))
+            } else if (currentBAC > 2.0) {
+                timeToSoberText.text = "Опасно! ${hours}ч ${minutes}м\nВызовите скорую! ⚠️"
+                timeToSoberText.setTextColor(Color.parseColor("#EF4444"))
+            } else if (currentBAC > 1.0) {
+                timeToSoberText.text = "Внимание! ${hours}ч ${minutes}м\nНе садитесь за руль! 🚗"
+                timeToSoberText.setTextColor(Color.parseColor("#F97316"))
+            } else {
+                timeToSoberText.text = "До трезвости: ${hours}ч ${minutes}м"
+                timeToSoberText.setTextColor(Color.parseColor("#F97316"))
+            }
         } else {
-            timeToSoberText.text = "Трезв"
+            timeToSoberText.text = "🎯 Трезв"
             timeToSoberText.setTextColor(Color.parseColor("#4ADE80"))
         }
     }
@@ -254,7 +318,7 @@ class MainActivity : Activity() {
             val amount = dailyRecords[date]?.totalAmount ?: 0
             val dayName = SimpleDateFormat("EE", Locale.getDefault()).format(calendar.time)
             weekData.add(Pair(dayName, amount))
-            calendar.add(Calendar.DAY_OF_YEAR, i) // возвращаем обратно
+            calendar.add(Calendar.DAY_OF_YEAR, i)
         }
 
         val weekText = weekData.joinToString(" • ") { (day, amount) ->
@@ -292,11 +356,47 @@ class MainActivity : Activity() {
             .show()
     }
 
+    // 🔄 ПРАВИЛЬНЫЙ сброс только текущего дня
+    private fun resetCurrentDay() {
+        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+        // Находим записи за сегодня
+        val todayRecord = dailyRecords[currentDate]
+
+        if (todayRecord != null) {
+            // Вычитаем из общих счетчиков
+            totalAmount -= todayRecord.totalAmount
+            totalAlcoholGrams -= todayRecord.totalAlcohol
+
+            // Удаляем записи за сегодня
+            dailyRecords.remove(currentDate)
+
+            // Удаляем из истории записи за сегодня
+            historyList.removeAll { record ->
+                val recordDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    .format(Date(record.timestamp))
+                recordDate == currentDate
+            }
+
+            // Сбрасываем время первого употребления если история пустая
+            if (historyList.isEmpty()) {
+                firstDrinkTime = 0
+            }
+
+            updateUI()
+            saveData()
+            Toast.makeText(this, "Данные за сегодня сброшены! 🎯", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Нет данных за сегодня для сброса", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     // 💾 Методы для сохранения/загрузки данных
     private fun saveData() {
         val editor = sharedPreferences.edit()
         editor.putInt("totalAmount", totalAmount)
         editor.putFloat("totalAlcoholGrams", totalAlcoholGrams.toFloat())
+        editor.putLong("firstDrinkTime", firstDrinkTime)
 
         val gson = Gson()
         val historyJson = gson.toJson(historyList)
@@ -310,6 +410,7 @@ class MainActivity : Activity() {
     private fun loadData() {
         totalAmount = sharedPreferences.getInt("totalAmount", 0)
         totalAlcoholGrams = sharedPreferences.getFloat("totalAlcoholGrams", 0f).toDouble()
+        firstDrinkTime = sharedPreferences.getLong("firstDrinkTime", 0)
 
         val gson = Gson()
 
@@ -342,30 +443,140 @@ class MainActivity : Activity() {
         }
     }
 
-    // ⏱️ Таймер для обновления времени
+    // ⏱️ УМНЫЙ таймер для обновления времени
     private fun startTimer() {
         Timer().scheduleAtFixedRate(object : TimerTask() {
             override fun run() {
                 runOnUiThread {
-                    updateTimeToSober()
-                    // Постепенное уменьшение уровня алкоголя
-                    if (totalAlcoholGrams > 0) {
-                        val elimination = userProfile.metabolism * userProfile.weight * 0.001
-                        totalAlcoholGrams = maxOf(0.0, totalAlcoholGrams - elimination)
-                        updateUI()
-                        saveData()
-                    }
+                    // Обновляем UI с правильными расчетами
+                    updateUI()
+                    saveData()
                 }
             }
         }, 0, 60000) // Обновлять каждую минуту
     }
-    private fun resetAll() {
-        totalAmount = 0
-        totalAlcoholGrams = 0.0
-        historyList.clear()
-        dailyRecords.clear()
-        updateUI()
-        saveData()
-        Toast.makeText(this, "Всё сброшено! 🎯", Toast.LENGTH_SHORT).show()
+
+    // 📅 Улучшенный календарь с цветами и деталями
+    private fun showEnhancedCalendar() {
+        val calendar = Calendar.getInstance()
+        val currentYear = calendar.get(Calendar.YEAR)
+        val currentMonth = calendar.get(Calendar.MONTH)
+
+        val dialogView = layoutInflater.inflate(R.layout.calendar_dialog, null)
+        val calendarTitle = dialogView.findViewById<TextView>(R.id.calendarTitle)
+        val calendarGrid = dialogView.findViewById<GridLayout>(R.id.calendarGrid)
+        val prevMonthButton = dialogView.findViewById<Button>(R.id.prevMonthButton)
+        val nextMonthButton = dialogView.findViewById<Button>(R.id.nextMonthButton)
+
+        val monthNames = arrayOf("Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+            "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь")
+
+        var displayedYear = currentYear
+        var displayedMonth = currentMonth
+
+        fun updateCalendar() {
+            calendarGrid.removeAllViews()
+            calendarTitle.text = "${monthNames[displayedMonth]} $displayedYear"
+
+            // Заголовки дней недели
+            val daysOfWeek = arrayOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+            for (day in daysOfWeek) {
+                val dayView = TextView(this).apply {
+                    text = day
+                    textSize = 12f
+                    setTextColor(Color.BLACK)
+                    gravity = Gravity.CENTER
+                    setPadding(4, 8, 4, 8)
+                }
+                calendarGrid.addView(dayView)
+            }
+
+            // Дни месяца
+            val tempCalendar = Calendar.getInstance().apply {
+                set(displayedYear, displayedMonth, 1)
+            }
+
+            val daysInMonth = tempCalendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+            val firstDayOfWeek = tempCalendar.get(Calendar.DAY_OF_WEEK)
+
+            // Пустые ячейки до первого дня
+            val offset = (firstDayOfWeek + 5) % 7 // Коррекция для понедельника
+            for (i in 0 until offset) {
+                calendarGrid.addView(TextView(this))
+            }
+
+            // Дни месяца
+            for (day in 1..daysInMonth) {
+                val dateStr = String.format("%d-%02d-%02d", displayedYear, displayedMonth + 1, day)
+                val amount = dailyRecords[dateStr]?.totalAmount ?: 0
+
+                val dayView = TextView(this).apply {
+                    text = day.toString()
+                    textSize = 14f
+                    gravity = Gravity.CENTER
+                    setPadding(8, 12, 8, 12)
+
+                    // Цвета: зеленый - трезво, красный - пили
+                    if (amount > 0) {
+                        setBackgroundColor(Color.parseColor("#FFE0E0"))
+                        setTextColor(Color.parseColor("#D32F2F"))
+                        setOnClickListener {
+                            showDayDetails(dateStr, amount)
+                        }
+                    } else {
+                        setBackgroundColor(Color.parseColor("#E8F5E8"))
+                        setTextColor(Color.parseColor("#388E3C"))
+                    }
+                }
+                calendarGrid.addView(dayView)
+            }
+        }
+
+        prevMonthButton.setOnClickListener {
+            displayedMonth--
+            if (displayedMonth < 0) {
+                displayedMonth = 11
+                displayedYear--
+            }
+            updateCalendar()
+        }
+
+        nextMonthButton.setOnClickListener {
+            displayedMonth++
+            if (displayedMonth > 11) {
+                displayedMonth = 0
+                displayedYear++
+            }
+            updateCalendar()
+        }
+
+        updateCalendar()
+
+        AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setPositiveButton("Закрыть", null)
+            .show()
+    }
+
+    // 📊 Показать детали за день
+    private fun showDayDetails(date: String, amount: Int) {
+        val record = dailyRecords[date]
+        val message = if (record != null) {
+            val drinksText = record.drinks.joinToString("\n") { drink ->
+                "• ${drink.drink}: ${drink.amount} мл (${"%.1f".format(drink.alcoholGrams)} г алкоголя)"
+            }
+            "📅 $date\n\n" +
+                    "Всего выпито: ${record.totalAmount} мл\n" +
+                    "Алкоголя: ${"%.1f".format(record.totalAlcohol)} г\n\n" +
+                    "Напитки:\n$drinksText"
+        } else {
+            "📅 $date\n\nТрезвый день! 🎉"
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Детали дня")
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .show()
     }
 }
