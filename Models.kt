@@ -5,7 +5,7 @@ import java.util.*
 
 // Класс для хранения дневной статистики
 data class DailyRecord(
-    val date: String, // Формат: "2024-01-15"
+    val date: String,
     val totalAmount: Int,
     val totalAlcohol: Double,
     val drinks: List<DrinkRecord>
@@ -13,9 +13,10 @@ data class DailyRecord(
 
 // Класс профиля пользователя
 data class UserProfile(
-    val weight: Double = 70.0,
-    val isMale: Boolean = true,
-    val metabolism: Double = 0.015, // автоматически рассчитывается
+    var weight: Double = 70.0,
+    var isMale: Boolean = true,
+    var metabolism: Double = 0.15,
+    var participants: Int = 4,
     val createdDate: String = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 )
 

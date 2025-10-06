@@ -15,6 +15,7 @@ class ProfileActivity : Activity() {
     private lateinit var weightEditText: EditText
     private lateinit var genderRadioGroup: RadioGroup
     private lateinit var metabolismValueText: TextView
+    private lateinit var participantsEditText: EditText
     private lateinit var saveButton: Button
     private lateinit var backButton: Button
 
@@ -37,6 +38,7 @@ class ProfileActivity : Activity() {
         weightEditText = findViewById(R.id.weightEditText)
         genderRadioGroup = findViewById(R.id.genderRadioGroup)
         metabolismValueText = findViewById(R.id.metabolismValueText)
+        participantsEditText = findViewById(R.id.participantsEditText)
         saveButton = findViewById(R.id.saveButton)
         backButton = findViewById(R.id.backButton)
     }
@@ -76,27 +78,25 @@ class ProfileActivity : Activity() {
             genderRadioGroup.check(R.id.femaleRadioButton)
         }
 
+        // Участники
+        participantsEditText.setText(userProfile.participants.toString())
+
         // Метаболизм
         updateMetabolism()
     }
 
-    // СУПЕР-РЕАЛИСТИЧНЫЙ расчет метаболизма
+    // ПРАВИЛЬНЫЙ расчет метаболизма - постоянная величина
     private fun updateMetabolism() {
         try {
-            val weight = weightEditText.text.toString().toDoubleOrNull() ?: 70.0
             val isMale = genderRadioGroup.checkedRadioButtonId == R.id.maleRadioButton
 
-            // Основано на реальных медицинских данных:
-            // Средний человек выводит 0.1-0.2 г алкогля на кг веса в час
-            // Переводим в промилле: 0.15 г/кг/час ≈ 0.15 ‰/час для 70кг
+            // Метаболизм - ПОСТОЯННАЯ величина
+            val metabolism = if (isMale) 0.15 else 0.13
 
-            val gramsPerKgPerHour = if (isMale) 0.15 else 0.12 // мужчины быстрее
-            val metabolism = (gramsPerKgPerHour * weight) / 100 * 10 // пересчет в промилле/час
-
-            metabolismValueText.text = "Скорость метаболизма: ${"%.3f".format(metabolism)} ‰/час\n(рассчитано автоматически)"
+            metabolismValueText.text = "Скорость метаболизма: ${"%.2f".format(metabolism)} ‰/час"
 
         } catch (e: Exception) {
-            metabolismValueText.text = "Скорость метаболизма: 0.150 ‰/час\n(рассчитано автоматически)"
+            metabolismValueText.text = "Скорость метаболизма: 0.15 ‰/час"
         }
     }
 
@@ -114,16 +114,30 @@ class ProfileActivity : Activity() {
                 return
             }
 
+            // Проверка участников
+            val participantsText = participantsEditText.text.toString()
+            if (participantsText.isEmpty()) {
+                Toast.makeText(this, "Введите количество участников", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            var participants = participantsText.toInt()
+            if (participants < 2 || participants > 8) {
+                Toast.makeText(this, "Участников должно быть от 2 до 8", Toast.LENGTH_SHORT).show()
+                participants = 4 // значение по умолчанию
+                participantsEditText.setText("4")
+            }
+
             val isMale = genderRadioGroup.checkedRadioButtonId == R.id.maleRadioButton
 
-            // РЕАЛИСТИЧНЫЙ расчет метаболизма на основе веса
-            val gramsPerKgPerHour = if (isMale) 0.15 else 0.12
-            val metabolism = (gramsPerKgPerHour * weight) / 100 * 10
+            // Метаболизм - ПОСТОЯННАЯ величина, не зависящая от веса
+            val metabolism = if (isMale) 0.15 else 0.13
 
             userProfile = UserProfile(
                 weight = weight,
                 isMale = isMale,
-                metabolism = metabolism
+                metabolism = metabolism,  // постоянное значение
+                participants = participants
             )
 
             val gson = Gson()
@@ -134,7 +148,7 @@ class ProfileActivity : Activity() {
             finish()
 
         } catch (e: NumberFormatException) {
-            Toast.makeText(this, "Введите корректный вес", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Введите корректные данные", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -145,6 +159,11 @@ class ProfileActivity : Activity() {
             gson.fromJson(profileJson, UserProfile::class.java)
         } else {
             UserProfile() // профиль по умолчанию
+        }
+
+        // Проверяем участников
+        if (userProfile.participants < 2 || userProfile.participants > 8) {
+            userProfile = userProfile.copy(participants = 4)
         }
     }
 }

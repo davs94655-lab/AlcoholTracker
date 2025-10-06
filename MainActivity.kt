@@ -1,18 +1,26 @@
 package com.example.alcoholtracker
 
+import android.animation.ObjectAnimator
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.Color
+import android.graphics.*
 import android.os.Bundle
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import android.widget.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.PI as MathPI
 import kotlin.math.max
-import android.view.Gravity
 
 class MainActivity : Activity() {
 
@@ -20,6 +28,7 @@ class MainActivity : Activity() {
     private lateinit var calendarButton: Button
     private lateinit var profileButton: Button
     private lateinit var resetButton: Button
+    private lateinit var rouletteButton: Button
     private lateinit var totalDrinksText: TextView
     private lateinit var dailyTotalText: TextView
     private lateinit var dailyAlcoholText: TextView
@@ -35,7 +44,7 @@ class MainActivity : Activity() {
     private lateinit var userProfile: UserProfile
     private lateinit var sharedPreferences: SharedPreferences
 
-    private var firstDrinkTime: Long = 0 // Время первого употребления
+    private var firstDrinkTime: Long = 0
 
     // Крепость напитков в %
     private val drinkStrength = mapOf(
@@ -55,7 +64,6 @@ class MainActivity : Activity() {
         loadData()
         loadUserProfile()
 
-        // ДОБАВЬТЕ ЭТУ ПРОВЕРКУ
         println("DEBUG ПРИ ЗАПУСКЕ: Вес=${userProfile.weight}кг, Метаболизм=${userProfile.metabolism}‰/час")
 
         initViews()
@@ -69,6 +77,7 @@ class MainActivity : Activity() {
         calendarButton = findViewById(R.id.calendarButton)
         profileButton = findViewById(R.id.profileButton)
         resetButton = findViewById(R.id.resetButton)
+        rouletteButton = findViewById(R.id.rouletteButton)
         totalDrinksText = findViewById(R.id.totalDrinksText)
         dailyTotalText = findViewById(R.id.dailyTotalText)
         dailyAlcoholText = findViewById(R.id.dailyAlcoholText)
@@ -84,7 +93,7 @@ class MainActivity : Activity() {
         }
 
         calendarButton.setOnClickListener {
-            showEnhancedCalendar() // вместо showCalendar()
+            showEnhancedCalendar()
         }
 
         profileButton.setOnClickListener {
@@ -94,6 +103,10 @@ class MainActivity : Activity() {
 
         resetButton.setOnClickListener {
             showResetConfirmationDialog()
+        }
+
+        rouletteButton.setOnClickListener {
+            showRouletteDialog()
         }
     }
 
@@ -152,29 +165,24 @@ class MainActivity : Activity() {
     private fun addDrink(drink: String, amount: Int) {
         val currentTime = System.currentTimeMillis()
 
-        // Запоминаем время первого употребления
         if (historyList.isEmpty()) {
             firstDrinkTime = currentTime
         }
 
         totalAmount += amount
 
-        // Расчет алкоголя в граммах
         val strength = drinkStrength[drink] ?: 0.0
         val alcoholGrams = (amount * strength * 0.789) / 100
         totalAlcoholGrams += alcoholGrams
 
-        // Добавляем в историю
         val record = DrinkRecord(drink, amount, currentTime, alcoholGrams)
         historyList.add(0, record)
 
-        // Обновляем дневную статистику
         updateDailyRecords(record)
 
         updateUI()
         saveData()
 
-        // Показываем тост с расчетом уровня алкоголя
         val hoursSinceFirstDrink = if (firstDrinkTime > 0) {
             (currentTime - firstDrinkTime) / (1000.0 * 60 * 60)
         } else {
@@ -210,16 +218,13 @@ class MainActivity : Activity() {
         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         val todayRecord = dailyRecords[currentDate]
 
-        // Общая статистика
         totalDrinksText.text = "${totalAmount} мл"
 
-        // Дневная статистика
         val dailyAmount = todayRecord?.totalAmount ?: 0
         val dailyAlcohol = todayRecord?.totalAlcohol ?: 0.0
         dailyTotalText.text = "Выпито сегодня: ${dailyAmount} мл"
         dailyAlcoholText.text = "Чистого алкоголя: ${"%.1f".format(dailyAlcohol)} г"
 
-        // Расчет уровня алкоголя в крови с учетом времени
         val hoursSinceFirstDrink = if (firstDrinkTime > 0) {
             (System.currentTimeMillis() - firstDrinkTime) / (1000.0 * 60 * 60)
         } else {
@@ -227,39 +232,29 @@ class MainActivity : Activity() {
         }
 
         val bac = calculateBAC(totalAlcoholGrams, hoursSinceFirstDrink)
+
         alcoholLevelText.text = "🔬 Алкоголь в крови: ${"%.3f".format(bac)}‰"
 
-        // Статус опьянения
         val status = calculateStatus(bac)
         statusText.text = status.first
         statusText.setTextColor(status.second)
 
-        // Время до трезвости
         updateTimeToSober(bac)
-
-        // История за неделю
         updateWeekHistory()
     }
 
-    // 🧮 ПРАВИЛЬНЫЙ расчет уровня алкоголя в крови
     private fun calculateBAC(totalAlcoholGrams: Double, hoursSinceFirstDrink: Double): Double {
-        // ПРАВИЛЬНАЯ формула Widmark:
-        // BAC = (алкоголь в граммах / (вес * коэффициент распределения)) - (метаболизм * часы)
-        // Коэффициент распределения: 0.7 для мужчин, 0.6 для женщин
+        if (userProfile.weight <= 0) return 0.0
 
         val r = if (userProfile.isMale) 0.7 else 0.6
         val weight = userProfile.weight
 
-        // BAC в промилле (‰) = (граммы алкоголя / (вес * r))
-        val bac = totalAlcoholGrams / (weight * r)
-
-        // Учитываем метаболизм (вывод алкоголя)
+        val maxBAC = totalAlcoholGrams / (weight * r)
         val metabolismEffect = userProfile.metabolism * hoursSinceFirstDrink
 
-        return max(0.0, bac - metabolismEffect)
+        return max(0.0, maxBAC - metabolismEffect)
     }
 
-    // 🎯 Расчет статуса опьянения на основе промилле
     private fun calculateStatus(bac: Double): Pair<String, Int> {
         return when {
             bac < 0.3 -> Pair("🎯 Абсолютно трезв", Color.parseColor("#4ADE80"))
@@ -272,22 +267,12 @@ class MainActivity : Activity() {
         }
     }
 
-    // ⏰ ПРАВИЛЬНЫЙ расчет времени до трезвости
-    // ⏰ ПРАВИЛЬНЫЙ расчет времени до трезвости
-    // ⏰ ПРАВИЛЬНЫЙ расчет времени до трезвости
     private fun updateTimeToSober(currentBAC: Double) {
-        if (currentBAC > 0.1) {
-            // Время до трезвости = текущий BAC / скорость метаболизма
+        if (currentBAC > 0.05) {
             val hoursToSober = currentBAC / userProfile.metabolism
-
             val hours = hoursToSober.toInt()
             val minutes = ((hoursToSober - hours) * 60).toInt()
 
-            // ОТЛАДКА ДЛЯ ПРОВЕРКИ
-            println("DEBUG: BAC=$currentBAC, Метаболизм=${userProfile.metabolism}, Время=$hoursToSober часов")
-            println("DEBUG: Вес=${userProfile.weight}кг, Пол=${if (userProfile.isMale) "муж" else "жен"}")
-
-            // Предупреждение об опасности
             if (currentBAC > 3.0) {
                 timeToSoberText.text = "ОПАСНОСТЬ! ${hours}ч ${minutes}м\nСрочно к врачу! 🚑"
                 timeToSoberText.setTextColor(Color.parseColor("#DC2626"))
@@ -307,7 +292,6 @@ class MainActivity : Activity() {
         }
     }
 
-    // 📈 Обновление истории за неделю
     private fun updateWeekHistory() {
         val calendar = Calendar.getInstance()
         val weekData = mutableListOf<Pair<String, Int>>()
@@ -328,57 +312,22 @@ class MainActivity : Activity() {
         weekHistoryText.text = "📈 Неделя: $weekText"
     }
 
-    // 📅 Показать календарь
-    private fun showCalendar() {
-        val calendar = Calendar.getInstance()
-        val currentMonth = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calendar.time)
-
-        val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-        val calendarText = StringBuilder("📅 $currentMonth\n\n")
-
-        for (day in 1..daysInMonth) {
-            val dateStr = String.format("%s-%02d",
-                SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(calendar.time), day)
-            val amount = dailyRecords[dateStr]?.totalAmount ?: 0
-            if (amount > 0) {
-                calendarText.append("$day число: $amount мл\n")
-            }
-        }
-
-        if (calendarText.toString() == "📅 $currentMonth\n\n") {
-            calendarText.append("В этом месяце трезво! 🎉")
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle("Календарь употребления")
-            .setMessage(calendarText.toString())
-            .setPositiveButton("OK", null)
-            .show()
-    }
-
-    // 🔄 ПРАВИЛЬНЫЙ сброс только текущего дня
     private fun resetCurrentDay() {
         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-
-        // Находим записи за сегодня
         val todayRecord = dailyRecords[currentDate]
 
         if (todayRecord != null) {
-            // Вычитаем из общих счетчиков
             totalAmount -= todayRecord.totalAmount
             totalAlcoholGrams -= todayRecord.totalAlcohol
 
-            // Удаляем записи за сегодня
             dailyRecords.remove(currentDate)
 
-            // Удаляем из истории записи за сегодня
             historyList.removeAll { record ->
                 val recordDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                     .format(Date(record.timestamp))
                 recordDate == currentDate
             }
 
-            // Сбрасываем время первого употребления если история пустая
             if (historyList.isEmpty()) {
                 firstDrinkTime = 0
             }
@@ -391,7 +340,6 @@ class MainActivity : Activity() {
         }
     }
 
-    // 💾 Методы для сохранения/загрузки данных
     private fun saveData() {
         val editor = sharedPreferences.edit()
         editor.putInt("totalAmount", totalAmount)
@@ -414,7 +362,6 @@ class MainActivity : Activity() {
 
         val gson = Gson()
 
-        // Загрузка истории
         val historyJson = sharedPreferences.getString("history", "")
         if (!historyJson.isNullOrEmpty()) {
             val type = object : TypeToken<MutableList<DrinkRecord>>() {}.type
@@ -423,7 +370,6 @@ class MainActivity : Activity() {
             historyList.addAll(loadedList)
         }
 
-        // Загрузка дневных записей
         val dailyJson = sharedPreferences.getString("dailyRecords", "")
         if (!dailyJson.isNullOrEmpty()) {
             val type = object : TypeToken<MutableMap<String, DailyRecord>>() {}.type
@@ -439,138 +385,192 @@ class MainActivity : Activity() {
         userProfile = if (!profileJson.isNullOrEmpty()) {
             gson.fromJson(profileJson, UserProfile::class.java)
         } else {
-            UserProfile() // профиль по умолчанию
+            UserProfile()
+        }
+
+        if (userProfile.metabolism <= 0.01) {
+            userProfile = UserProfile(
+                weight = userProfile.weight,
+                isMale = userProfile.isMale,
+                metabolism = if (userProfile.isMale) 0.15 else 0.13,
+                participants = userProfile.participants
+            )
+        }
+
+        if (userProfile.participants < 2 || userProfile.participants > 8) {
+            userProfile = userProfile.copy(participants = 4)
         }
     }
 
-    // ⏱️ УМНЫЙ таймер для обновления времени
     private fun startTimer() {
         Timer().scheduleAtFixedRate(object : TimerTask() {
             override fun run() {
                 runOnUiThread {
-                    // Обновляем UI с правильными расчетами
                     updateUI()
                     saveData()
                 }
             }
-        }, 0, 60000) // Обновлять каждую минуту
+        }, 0, 60000)
     }
 
-    // 📅 Улучшенный календарь с цветами и деталями
     private fun showEnhancedCalendar() {
-        val calendar = Calendar.getInstance()
-        val currentYear = calendar.get(Calendar.YEAR)
-        val currentMonth = calendar.get(Calendar.MONTH)
+        try {
+            val dialogView = layoutInflater.inflate(R.layout.calendar_dialog, null)
+            val calendarTitle = dialogView.findViewById<TextView>(R.id.calendarTitle)
+            val calendarGrid = dialogView.findViewById<GridView>(R.id.calendarGrid)
+            val prevMonthButton = dialogView.findViewById<ImageButton>(R.id.prevMonthButton)
+            val nextMonthButton = dialogView.findViewById<ImageButton>(R.id.nextMonthButton)
 
-        val dialogView = layoutInflater.inflate(R.layout.calendar_dialog, null)
-        val calendarTitle = dialogView.findViewById<TextView>(R.id.calendarTitle)
-        val calendarGrid = dialogView.findViewById<GridLayout>(R.id.calendarGrid)
-        val prevMonthButton = dialogView.findViewById<Button>(R.id.prevMonthButton)
-        val nextMonthButton = dialogView.findViewById<Button>(R.id.nextMonthButton)
+            val monthNames = arrayOf("Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+                "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь")
 
-        val monthNames = arrayOf("Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-            "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь")
+            var currentCalendar = Calendar.getInstance()
 
-        var displayedYear = currentYear
-        var displayedMonth = currentMonth
+            data class CalendarDay(val day: Int, val amountText: String, val date: String = "")
 
-        fun updateCalendar() {
-            calendarGrid.removeAllViews()
-            calendarTitle.text = "${monthNames[displayedMonth]} $displayedYear"
+            fun updateCalendar() {
+                try {
+                    val year = currentCalendar.get(Calendar.YEAR)
+                    val month = currentCalendar.get(Calendar.MONTH)
+                    calendarTitle.text = "${monthNames[month]} $year"
 
-            // Заголовки дней недели
-            val daysOfWeek = arrayOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
-            for (day in daysOfWeek) {
-                val dayView = TextView(this).apply {
-                    text = day
-                    textSize = 12f
-                    setTextColor(Color.BLACK)
-                    gravity = Gravity.CENTER
-                    setPadding(4, 8, 4, 8)
-                }
-                calendarGrid.addView(dayView)
-            }
+                    val days = mutableListOf<CalendarDay>()
 
-            // Дни месяца
-            val tempCalendar = Calendar.getInstance().apply {
-                set(displayedYear, displayedMonth, 1)
-            }
+                    val tempCalendar = Calendar.getInstance()
+                    tempCalendar.set(year, month, 1)
 
-            val daysInMonth = tempCalendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-            val firstDayOfWeek = tempCalendar.get(Calendar.DAY_OF_WEEK)
+                    val daysInMonth = tempCalendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+                    val firstDayOfWeek = (tempCalendar.get(Calendar.DAY_OF_WEEK) + 5) % 7
 
-            // Пустые ячейки до первого дня
-            val offset = (firstDayOfWeek + 5) % 7 // Коррекция для понедельника
-            for (i in 0 until offset) {
-                calendarGrid.addView(TextView(this))
-            }
-
-            // Дни месяца
-            for (day in 1..daysInMonth) {
-                val dateStr = String.format("%d-%02d-%02d", displayedYear, displayedMonth + 1, day)
-                val amount = dailyRecords[dateStr]?.totalAmount ?: 0
-
-                val dayView = TextView(this).apply {
-                    text = day.toString()
-                    textSize = 14f
-                    gravity = Gravity.CENTER
-                    setPadding(8, 12, 8, 12)
-
-                    // Цвета: зеленый - трезво, красный - пили
-                    if (amount > 0) {
-                        setBackgroundColor(Color.parseColor("#FFE0E0"))
-                        setTextColor(Color.parseColor("#D32F2F"))
-                        setOnClickListener {
-                            showDayDetails(dateStr, amount)
-                        }
-                    } else {
-                        setBackgroundColor(Color.parseColor("#E8F5E8"))
-                        setTextColor(Color.parseColor("#388E3C"))
+                    for (i in 0 until firstDayOfWeek) {
+                        days.add(CalendarDay(0, ""))
                     }
+
+                    for (day in 1..daysInMonth) {
+                        val dateStr = String.format("%d-%02d-%02d", year, month + 1, day)
+                        val record = dailyRecords[dateStr]
+                        val amountText = if (record?.totalAmount ?: 0 > 0) "${record!!.totalAmount}мл" else ""
+                        days.add(CalendarDay(day, amountText, dateStr))
+                    }
+
+                    val adapter = object : BaseAdapter() {
+                        override fun getCount(): Int = days.size
+                        override fun getItem(position: Int): Any = days[position]
+                        override fun getItemId(position: Int): Long = position.toLong()
+
+                        override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
+                            val view = convertView ?: layoutInflater.inflate(R.layout.calendar_day_item, parent, false)
+                            val dayItem = days[position]
+
+                            val dayNumber = view.findViewById<TextView>(R.id.dayNumber)
+                            val dayAmount = view.findViewById<TextView>(R.id.dayAmount)
+
+                            if (dayItem.day > 0) {
+                                dayNumber.text = dayItem.day.toString()
+                                dayAmount.text = dayItem.amountText
+
+                                val today = Calendar.getInstance()
+                                val isToday = (dayItem.day == today.get(Calendar.DAY_OF_MONTH) &&
+                                        month == today.get(Calendar.MONTH) &&
+                                        year == today.get(Calendar.YEAR))
+
+                                if (isToday) {
+                                    dayNumber.setBackgroundColor(Color.parseColor("#1976D2"))
+                                    dayNumber.setTextColor(Color.WHITE)
+                                    dayAmount.setTextColor(Color.parseColor("#1976D2"))
+                                } else if (dayItem.amountText.isNotEmpty()) {
+                                    dayNumber.setBackgroundColor(Color.parseColor("#FF5252"))
+                                    dayNumber.setTextColor(Color.WHITE)
+                                    dayAmount.setTextColor(Color.parseColor("#FF5252"))
+                                } else {
+                                    dayNumber.setBackgroundColor(Color.parseColor("#F5F5F5"))
+                                    dayNumber.setTextColor(Color.parseColor("#333333"))
+                                    dayAmount.setTextColor(Color.parseColor("#666666"))
+                                }
+
+                                view.setOnClickListener {
+                                    showDayDetails(dayItem.date)
+                                }
+                            } else {
+                                dayNumber.text = ""
+                                dayAmount.text = ""
+                                dayNumber.setBackgroundColor(Color.TRANSPARENT)
+                            }
+
+                            return view
+                        }
+                    }
+
+                    calendarGrid.adapter = adapter
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-                calendarGrid.addView(dayView)
             }
-        }
 
-        prevMonthButton.setOnClickListener {
-            displayedMonth--
-            if (displayedMonth < 0) {
-                displayedMonth = 11
-                displayedYear--
+            prevMonthButton.setOnClickListener {
+                currentCalendar.add(Calendar.MONTH, -1)
+                updateCalendar()
             }
+
+            nextMonthButton.setOnClickListener {
+                currentCalendar.add(Calendar.MONTH, 1)
+                updateCalendar()
+            }
+
+            var startX = 0f
+            val swipeOverlay = dialogView.findViewById<View>(R.id.swipeOverlay)
+            swipeOverlay.setOnTouchListener { _, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        startX = event.x
+                        true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        val endX = event.x
+                        val diffX = endX - startX
+
+                        if (Math.abs(diffX) > 100) {
+                            if (diffX > 0) {
+                                currentCalendar.add(Calendar.MONTH, -1)
+                                updateCalendar()
+                            } else {
+                                currentCalendar.add(Calendar.MONTH, 1)
+                                updateCalendar()
+                            }
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+
+            val dialog = AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setPositiveButton("Закрыть") { d, _ -> d.dismiss() }
+                .create()
+
+            dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            dialog.show()
             updateCalendar()
+
+        } catch (e: Exception) {
+            Toast.makeText(this, "Ошибка загрузки календаря", Toast.LENGTH_SHORT).show()
         }
-
-        nextMonthButton.setOnClickListener {
-            displayedMonth++
-            if (displayedMonth > 11) {
-                displayedMonth = 0
-                displayedYear++
-            }
-            updateCalendar()
-        }
-
-        updateCalendar()
-
-        AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setPositiveButton("Закрыть", null)
-            .show()
     }
 
-    // 📊 Показать детали за день
-    private fun showDayDetails(date: String, amount: Int) {
+    private fun showDayDetails(date: String) {
         val record = dailyRecords[date]
-        val message = if (record != null) {
+        val message = if (record != null && record.totalAmount > 0) {
             val drinksText = record.drinks.joinToString("\n") { drink ->
                 "• ${drink.drink}: ${drink.amount} мл (${"%.1f".format(drink.alcoholGrams)} г алкоголя)"
             }
-            "📅 $date\n\n" +
+            "📅 ${formatDateForDisplay(date)}\n\n" +
                     "Всего выпито: ${record.totalAmount} мл\n" +
                     "Алкоголя: ${"%.1f".format(record.totalAlcohol)} г\n\n" +
                     "Напитки:\n$drinksText"
         } else {
-            "📅 $date\n\nТрезвый день! 🎉"
+            "📅 ${formatDateForDisplay(date)}\n\nТрезвый день! 🎉\n\nВы не употребляли алкоголь в этот день."
         }
 
         AlertDialog.Builder(this)
@@ -578,5 +578,113 @@ class MainActivity : Activity() {
             .setMessage(message)
             .setPositiveButton("OK", null)
             .show()
+    }
+
+    private fun formatDateForDisplay(dateStr: String): String {
+        return try {
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val outputFormat = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
+            outputFormat.format(inputFormat.parse(dateStr)!!)
+        } catch (e: Exception) {
+            dateStr
+        }
+    }
+
+    private fun showRouletteDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.roulette_dialog, null)
+        val rouletteWheel = dialogView.findViewById<ImageView>(R.id.roulette_background)
+        val resultText = dialogView.findViewById<TextView>(R.id.resultText)
+        val spinButton = dialogView.findViewById<Button>(R.id.spinButton)
+
+        val participants = userProfile.participants
+        val colors = arrayOf("#FF5252", "#FF9800", "#4CAF50", "#2196F3", "#9C27B0", "#795548", "#607D8B", "#E91E63")
+        val playerNames = arrayOf("Игрок 1", "Игрок 2", "Игрок 3", "Игрок 4", "Игрок 5", "Игрок 6", "Игрок 7", "Игрок 8")
+
+        updateRouletteWheel(rouletteWheel, participants, colors)
+
+        var isSpinning = false
+
+        spinButton.setOnClickListener {
+            if (!isSpinning) {
+                isSpinning = true
+                resultText.text = "Крутим..."
+                spinButton.isEnabled = false
+
+                val spinAnimator = ObjectAnimator.ofFloat(rouletteWheel, "rotation", 0f, 3600f)
+                spinAnimator.duration = 5000
+                spinAnimator.interpolator = DecelerateInterpolator()
+
+                spinAnimator.addListener(object : android.animation.Animator.AnimatorListener {
+                    override fun onAnimationStart(animation: android.animation.Animator) {}
+                    override fun onAnimationCancel(animation: android.animation.Animator) {}
+                    override fun onAnimationRepeat(animation: android.animation.Animator) {}
+
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        val winner = (0 until participants).random()
+                        val winnerName = playerNames[winner]
+                        val winnerColor = colors[winner]
+
+                        resultText.text = "Пьёт: $winnerName! 🍻"
+                        resultText.setTextColor(Color.parseColor(winnerColor))
+
+                        val toast = Toast.makeText(this@MainActivity,
+                            "🎉 $winnerName пьёт! 🍻\nЗа твое здоровье!", Toast.LENGTH_LONG)
+                        toast.setGravity(Gravity.CENTER, 0, 0)
+                        toast.show()
+
+                        isSpinning = false
+                        spinButton.isEnabled = true
+                    }
+                })
+
+                spinAnimator.start()
+            }
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setPositiveButton("Закрыть") { d, _ -> d.dismiss() }
+            .create()
+
+        dialog.show()
+    }
+
+    private fun updateRouletteWheel(wheel: ImageView, participants: Int, colors: Array<String>) {
+        val size = 500
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint().apply {
+            isAntiAlias = true
+        }
+
+        val centerX = size / 2f
+        val centerY = size / 2f
+        val radius = size / 2f - 20
+
+        val sectorAngle = 360f / participants
+        for (i in 0 until participants) {
+            paint.color = Color.parseColor(colors[i])
+
+            val startAngle = i * sectorAngle
+            val rectF = RectF(20f, 20f, size - 20f, size - 20f)
+
+            canvas.drawArc(rectF, startAngle, sectorAngle, true, paint)
+
+            paint.color = Color.WHITE
+            paint.textSize = 30f
+            paint.textAlign = Paint.Align.CENTER
+
+            val textAngle = startAngle + sectorAngle / 2
+            val textRadius = radius * 0.6f
+            val x = centerX + textRadius * cos(Math.toRadians(textAngle.toDouble())).toFloat()
+            val y = centerY + textRadius * sin(Math.toRadians(textAngle.toDouble())).toFloat()
+
+            canvas.drawText("${i + 1}", x, y, paint)
+        }
+
+        paint.color = Color.WHITE
+        canvas.drawCircle(centerX, centerY, radius * 0.2f, paint)
+
+        wheel.setImageBitmap(bitmap)
     }
 }

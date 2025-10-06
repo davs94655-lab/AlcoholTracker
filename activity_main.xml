@@ -166,6 +166,17 @@
             android:textColor="@color/white"
             android:padding="12dp" />
 
+        <!-- Добавьте после кнопки сброса -->
+        <Button
+            android:id="@+id/rouletteButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🎰 Крутить рулетку"
+            android:textSize="16sp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/button_background"
+            android:textColor="#FFFFFF" />
+
     </LinearLayout>
 
 </ScrollView>

@@ -54,7 +54,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="32dp">
+            android:layout_marginBottom="24dp">
 
             <RadioButton
                 android:id="@+id/maleRadioButton"
@@ -74,6 +74,35 @@
                 android:textSize="16sp" />
 
         </RadioGroup>
+
+        <!-- Участники застолья -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="24dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Участников застолья:"
+                android:textSize="16sp"
+                android:textColor="@color/text_primary" />
+
+            <EditText
+                android:id="@+id/participantsEditText"
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:text="4"
+                android:maxLength="1"
+                android:gravity="center"
+                android:background="@android:drawable/edit_text"
+                android:padding="8dp" />
+
+        </LinearLayout>
 
         <!-- Метаболизм (автоматический расчет) -->
         <TextView
